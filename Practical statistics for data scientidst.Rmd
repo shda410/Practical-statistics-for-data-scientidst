@@ -1,0 +1,625 @@
+state (인구에 따른 살인비율의 위치 추정) 를 통한 데이터 값들의 차이 
+
+# 값들의 정확한 대푯값을 찾기 위해선 컬럼들의 특징을 제대로 알아야 값을 대푯값을 
+찾을 수 있기 때문에 평균, 중앙값으로만 하는 것이 아니라 영향을 주는 값이 있다면
+가중치 값들을 이용해서 평균, 중앙값을 구하거나 극단치가 있다면 절사평균도 생각을 해야한다.
+
+
+```{r}
+
+state<-read.csv(file='c:/book/state.csv') #지역에 따라 살인의 비율이 다르다.
+state
+mean(state[["Population"]]) # 평균
+mean(state[["Population"]], trim=0.1) # 절사평균
+median(state[["Population"]]) # 중앙값
+
+install.packages("matrixStats") # 가중평균, 가중 중앙값을 채우기 위해서 필요한패키지
+
+# 가중평균 : weighted.mean(평균을 구할값, w=가중치)
+
+weighted.mean(state[['Murder.Rate']],w=state[["Population"]]) 
+
+# 가중 중간값 : weightedMedian(중앙값을 구할값,w=가중치)
+library('matrixStats')
+weightedMedian(state[['Murder.Rate']],w=state[["Population"]])
+
+```
+
+데이터 특징을 찾는 두번째 방법 : 변이를 파악한다 (산포도 파악)
+
+# 자유도에 따른 편향추정, 비편향 추정 - 즉, 오차가 있느냐 없느냐에 따라 데이터의 관여 정도가 다를 수 있기 때문에 편향값을 추정하는 것이 중요하다.
+
+변위를 추정하는 방법 : 백분위를 이용한다.
+
+순서통계량 - 정렬된 데이터를 나타내는 통계량
+
+```{r}
+
+# 백분위 수 예제
+
+sd(state[['Population']]) # 표준편차
+IQR(state[['Population']]) # 사분위범위
+mad(state[['Population']]) # 중위 절대편차
+
+
+
+
+```
+데이터의 분포도 
+
+```{r}
+seq(0.05,0.95,by=0.2)
+quantile(state[['Murder.Rate']],p=c(0.05,0.25,0.5,0.75,0.95))
+boxplot(state[["Population"]]/1000000,ylab="Population (millions)")
+# 수염(Whisker) : 값들의 분포도를 보여준다.
+
+```
+
+# 도수분포표 히스토그램
+
+```{r}
+
+breaks<-seq(from=min(state[["Population"]]),to=max(state[["Population"]]),length=11) # 최소값 최대값으로 해서 11구간으로 나눔
+
+pop_freq<-cut(state[['Population']],breaks=breaks,right=TRUE,include.lowest=TRUE)
+
+# 나눈값에서 값에 포함되는 범위값들을 추가
+
+
+# 구간에 따라 해당되는 주의 갯수 - 빈 값이 있기 때문에 값을 어떻게 분포하냐의 따라 데이터를 파악하는 부분이 달라질 수 있다.
+table(pop_freq)
+
+# 히스토그램
+
+hist(state[['Population']],breaks)
+
+# 밀도추정 함수 
+# 밀도추정 : 데이터와 변수의 관계를 파악하는 방법
+
+hist(state[['Murder.Rate']],freq=FALSE) # 값 전체의 비율을 보기때문에 freq=FALSE로 지정
+lines(density(state[['Murder.Rate']]),lwd=3, col='blue')
+
+```
+
+# 막대그래프 표현 - 범주형 데이터를 표현할 때 유리 
+
+```{r}
+
+dfw<-read.csv('c:/book/dfw_airline.csv')
+barplot(as.matrix(dfw)/6,cex.axis=0.5)
+ 
+```
+
+범주형 데이터 - 기댓값 : 각범주에 해당하는 수치형 변수들이 존재하는 특별한 경우가 있을 때 가중평균으로 구하는 값
+
+★  상관관계 
+
+corrplot - 상관관계가 높을 수록 그래프 모양이 얇고 색이 진하다 
+
+```{r}
+
+sp500_px<-read.csv('c:/book/sp500_data.csv')
+sp500_sym<-read.csv('c:/book/sp500_sectors.csv')
+
+# 2012년 7월 1일 이후로 etf와 symbol의 상관관계
+
+etfs<-sp500_px[row.names(sp500_px)>'2012-07-01',sp500_sym[sp500_sym$sector=='etf','symbol']]
+
+etfs
+library(corrplot)
+corrplot(cor(etfs),method='ellipse')
+
+```
+
+# 산점도 : 두변수의 관계를 시각화하여 가장 좋은 방법으로 나타내는 방법
+
+다변량 분석에 따라 사용하는 추정법
+
+# 분할표 - 두가지 이상의 범주형 변수의 빈도수를 기록한표
+
+# 육각형 구간 - 두변수를 육각형 모양의 구간으로 나눈그림
+
+# 등고도표 - 지도상에 같은 높이의 지점을 등고선으로 나타내는 것처럼, 두 변수의 밀도를 등고선으로 표시한 도표
+
+# 바이올린 도표 - 상자그림과 비슷하지만 밀도추정을 함께 보여준다.
+
+```{r}
+# 데이터 형식이 수치형 + 수치형인 경우 : 육각형 그래프, 등고선 그래프 사용
+
+
+kc_tax<-read.csv('c:/book/kc_tax.csv')
+
+kc_tax0<-subset(kc_tax,TaxAssessedValue < 750000 & SqFtTotLiving>100 & SqFtTotLiving < 3500)
+
+nrow(kc_tax0)
+
+install.packages('ggplot2')
+library(ggplot2)
+
+ggplot(kc_tax0,(aes(x=SqFtTotLiving,y=TaxAssessedValue)))+stat_binhex(colour='white')+theme_bw()+scale_fill_gradient(low='white',high='black')+labs(x='Finished Square Feet',y='Tax Assessed Value')
+
+ggplot(kc_tax0,(aes(x=SqFtTotLiving,y=TaxAssessedValue)))+theme_bw()+geom_point(alpha=0.1)+geom_density2d(colour='white')+labs(x='Finished Square Feet',y='Tax Assessed Value')
+
+
+```
+
+
+```{r}
+
+# 범주형 범주형 데이터인 경우 : Crosstable 이용
+
+lc_loans<-read.csv('c:/book/lc_loans.csv')
+
+install.packages('descr')
+library('descr')
+x_tab<-CrossTable(lc_loans$grade, lc_loans$status, prop.c=FALSE, prop.chisq = FALSE, prop.t=FALSE)
+
+x_tab
+
+```
+
+```{r}
+# 범주형 변수 , 수치형 변수인 경우 : 상자그림, 바이올린 그래프
+
+airline_stats<-read.csv('c:/book/airline_stats.csv')
+
+colnames(airline_stats)
+boxplot(pct_atc_delay~airline, data=airline_stats, ylim=c(0,5))
+
+# 바이올린 그래프의 장점은 boxplot에서 보여주지 못하는 데이터의 분포를 보여준다는 것이 장점이다.
+ggplot(data=airline_stats, aes(airline,pct_carrier_delay))+ ylim(0,50)+geom_violin()+labs(x="",y="Daliy % of Delayed Flights")
+
+
+
+```
+
+# 표본의 변동성 : 많은 양의 데이터를 가지고 있다면 추가로 표본을 얻어 통계의 분포를 직접 관찰할 수 있다.
+
+
+```{r}
+# 보류 : 표본의 갯수에 따라 히스토그램을 하면 정규화 모형으로 바뀐다.
+
+loans_income<-read.csv('c:/book/loans_income.csv')
+library(ggplot2)
+# 단순샘플랜덤 표본
+loans_income
+samp_data <- data.frame(sample(nrow(loans_income),1000),type='data_dist')
+samp_mean_05 <- data.frame(tapply(sample(nrow(loans_income),1000*5)),rep(1:1000,rep(5,1000)),FUN=mean),type='mean_of_5')
+
+
+
+```
+
+# 부트스트랩 표본 : 관측데이터 집합으로부터 얻은 복원추출의 표본
+                    추가적으로 표본을 복원 추출후 각 표본에 대한 통계량과 모델을 
+                    다시계산한다 (표본 오차보다 많이 쓰는 방법이다.)
+
+# 배깅 : 여러 부트스트랩 샘플을 가지고 트리를 여러개 만든 다음 각 트리에서 예측값을 평균을 내는 방법 
+
+# 신뢰구간 : 표본통계량의 부트스트랩 표본분포의 90%를 포함하는 구간을 말한다.
+
+
+                    
+```{r}
+install.packages('boot')
+library(boot)
+
+stat_fun<-fuction(x,idx) median(x[idx])
+boot_obj<- boot(loans_income,R=1000,statistic = stat_fun)
+
+
+```
+
+# QQ 그림 : 표본이 정규분포에 얼마나 가까운지 시각적으로 판별하는데 사용하는 그래프
+
+```{r}
+
+norm_samp<-rnorm(100) # RNORM : 정규분포를 나타내는 값들
+qqnorm(norm_samp)
+abline(a=0,b=1,col='grey')
+
+# ablline : y=a+bx graph 
+
+
+
+```
+
+# 꼬리와 왜도
+
+꼬리 : 적은 수의 극단값이 주로 존재하는, 도수분포의 길고 좁은 부분
+왜도 : 분포의 한쪽 꼬리가 반대쪽 다른 꼬리보다 긴 정도
+
+```{r}
+
+sp500_px<-read.csv('c:/book/sp500_data.csv')
+
+nlfx<-sp500_px[,'NFLX']
+nlfx<-diff(log(nlfx[nlfx>0]))
+qqnorm(nlfx)
+abline(a=0,b=1,col='grey')
+
+
+```
+
+# T 분포 : 갯수 30개이하 (자유도 n-1), 유의수준이 존재
+           표본정규분포의 평균을 구할 때
+           즉, 데이터가 너무 적을 때 예측반경을 넓혀서 값을 구할 때 사용
+           재표본추출 방법을 통해서 정규분포화 한다
+           
+           
+# 이항분포: 성공/ 실패 분포
+
+# 푸아송분포 : 일정한 시간,공간에 따른 사건이 발생하는 확률의 분포
+- 람다 : 단위시간이나 단위 면적당 사건이 발생하는 비율
+
+# 지수분포 : 한사건에서 그 다음 사건까지의 시간이나 거리에대한 도수분포
+# 베이불분포: 사건 발생률이 시간에 따라 변화하는, 지수분포의 일반화된 버전
+
+
+```{r}
+
+# dbinom : 이항분포를 나타내는 함수
+
+dbinom(2,5,prob=0.1)  # p값
+pbinom(2,5,0.1) # 1-p 값
+
+# rpois : 포아송 분포 생성, 
+rpois(100,lambda=2)
+
+# rexp : 지수분포 
+
+rexp(n=100,rate=0.2) # 의미 예 : 분당 평균적으로 0.2회 서비스 문의가 오는 경우 100분동안의 서비스 센터 문의전화를 시뮬레이션 
+
+# rwibull : 시간에 따라 일정하지 않은경우 지수분포의 확장편인 베이불 분포 사용
+# 증가하는 고장률
+rweibull(100,1.5,5000)
+
+# 예 : 1.5의 형상 파라미터와 5000의 특성 수명을 갖는 베이불 분포에서 샘플 100개 추출 b(베타)>1 보다 큰경우 발생률은 시간에 증감에 따라 증가 작을 경우 반대
+
+```
+
+실험설계 - 어떤 가설을 확인하거나 기각하기 위해서 목표를 가진 설계
+
+가설 -> 실험설계 -> 데이터수집 -> 추론 및 결론 도출
+
+추론 : 제한된 데이터로 주어진 실험 결과를 더 큰과정 또는 모집단에 적용하려는 의도
+
+# A/B 검정 : 두 처리방법, 제품 혹은 절차 중 어느 쪽이 다른 쪽보다 더 우월하다는 것을 입증하기 위해
+실험군을 두 그룹으로 나누어 진행하는 실험 (실험군,대조군)
+
+예시) 종자 발아가 어디에서 더 잘되는지 알아보기 위해 두가지 토양 처리를 검정
+      두 가지 가격을 검정하여 더 많은 순이익을 산출하는 쪽을 결정한다.
+      
+대조군이 필요한 이유 : 다른것들은 동일하게 적용 했다라는 표본이 필요하기 때문이다.
+
+A/B 검정을 할때는 반드시 측정지표 하나를 정해서 진행을 해야 나중에 연구자 편향이라는 함정에 빠지지 않게 된다.
+
+# 가설검정(유의성검정) : 관찰된 효과가 우연에 의한것인지 아닌지 여부를 알아내는 검정
+
+귀무가설 : 영가설, 우연에 의해 일어난 것이다. (조건에 해당이 없다.)
+대립가설:  증명하고자 하는 가설 (조건에 해당이 된다.)
+
+# 재표본 추출: 랜덤한 변동성을 알아보자는 일반적인 목표를 가지고, 관찰된 데이터의 값에서 표본을 반복적으로 추출하는 것을 의미
+
+부트스트랩(복원추출 기법), 순열검정이 두가지 유형이다.
+
+순열검정 : 두개 이상의 표본을 함께 결합하여 관측값들을 무작위로 재표본으로 추출하는 과정
+
+검정 방법
+1. 여러 그룹의 결과를 단일 데이터 집합으로 결합한다.
+2. 결합된 데이터를 잘 섞은 후 , 그룹 A와 동일한 크기의 표본을 무작위로 (비복원) 추출한다.
+3. 나머지 데이터에서 그룹 B와 동일한 크기의 샘플을 무작위로 (비복원) 추출한다.
+4. C, D 등의 그룹에서도 동일한 작업을 수행한다.
+5. 원래 샘플(예: 그룹 비율의 차이)에 대해 구한 통계량 또는 추정치가 무엇이던 간에 지금 추출한 재표본에 대해 모두 다시 계산하고 기록한다. 이것이 한번의 순열방법 진행
+6. 앞선 단계들을 R번 반복하여 검정통계량의 순열 분포를 얻는다.
+
+기존 관찰했던 값과 순열검정을 해서 관찰된 값을 비교하여 비슷하다면 우연에 의한 사건, 아니라면 우연에 의한 것이 아니고 통계적으로 유의미하다라고 표현한다.
+
+대리변수 : 참된 관심변수 대신하는 변수를 말한다 (직접 얻을 수 없거나, 측정하는 데 많은 비용이나 시간이 소요될 경우 대체하여 사용)
+
+```{r}
+
+session_times<-read.csv('c:/book/web_page_data.csv')
+install.packages('ggplot')
+
+library(ggplot2)
+ggplot(session_times, aes(x=Page, y=Time))+
+  geom_boxplot()
+
+mean_a<-mean(session_times[session_times['Page']=='Page A', 'Time'])
+mean_b<-mean(session_times[session_times['Page']=='Page B', 'Time'])
+mean_b-mean_a
+
+
+length(session_times[session_times['Page']=='Page A', 'Time']) # 21개
+length(session_times[session_times['Page']=='Page B', 'Time']) # 15개
+
+# 각 갯수에 따라서 21개의 그룹과 15개의 그룹으로 반복하여 표본을 추출 (순열검정)
+
+perm_fun<-function(x,n1,n2){
+  n<-n1+n2
+  idx_b<-sample(1:n,n1) # n1개 만큼 샘플 추출
+  idx_a<-setdiff(1:n,idx_b) # setdiff : 뽑히고 나머지 안뽑힌 집합 추출
+  mean_diff<-mean(x[idx_b])-mean(x[idx_a])
+  return(mean_diff)
+}
+
+perm_diff<-rep(0,1000)
+for(i in 1:1000){
+  perm_diff[i]<-perm_fun(session_times[,'Time'],21,15)
+  }
+
+hist(perm_diff,xlab='Session time diffrences (in seconds)')
+abline(v=mean_b-mean_a)
+
+# 그래프로 알 수 있는 것 
+# 무작위 순열로 구한 평균세션시간의 차이가 가끔 실제 관찰된 세션 시간 차이(수직선) 을 넘어가는 것을 볼 수 있다. 이것은 페이지 A,B 사이의 세션시간의 차이가 확률분포의 범위 내에 있음을 의미하고, 따라서 차이는 통계적으로 유의하지 않다.
+
+# 즉 평균 내에 값이 평균 외 값보다 더 많기 떄문에 유의미 하지 않다.
+
+# 이를 임의순열검정(random permultaion test), 임의화 검정(randomization test)이라고 한다.
+
+
+
+```
+
+
+# 전체순열 검정 : 데이터를 무작위로 섞고, 나누는 대신 실제로 나눌 수 있는 모든 가능한 조합을 찾는다. (샘플이 작을 경우에만 실용적)
+
+- 셔플링을 많이 할수록, 임의순열 검정은 전체순열 검정에 가까워 진다. 
+- 전체순열 검정으로 구한 값은 정확 검정으로 불린다.
+
+# 부트스트랩 순열검정 : 무작위 순열검정의 2단계와 3단계가 비복원으로 하던 것을 복원 추출로 하여 검정하는 방법 (개체의 임의성을 높힌다) 
+
+- 구별하는 것이 어려워, 데이터 과학의 입장에서는 별로 실용적이지 않다.
+
+★ 순열 검정의 가장 큰 장점은  '모두에게 맞는 접근 방식' 이라는 점이다.  즉, 샘플의 크기나 데이터의 형태에 따라 영향을 받지 않고 그냥 우연으로 일어난건지 아닌지를 판단할 수 있다는 점이다.
+
+# 통계의 유의성 : 통계학자가 자신의 실험 결과가 우연히 일어난 것인지 아니면, 우연히 일어날 수 밖에 없는 극단적인 것인지를 판단하는 방법이다.
+
+p값 : 귀무가설을 구체화한 기회 모델이 주어졌을 때, 관측된 결과와 같이 특이하거나 극단적인 결과를 얻을 확률
+
+알파 : 실제 결과가 통계적으로 의미 있는 것으로 간주되기 위해, 우연에 의한 기회 결과가 능가해야 하는 '비정상적인' 가능성의 임계 확률
+
+제1종 오류 : 우연에 의한 효과가 실제효과라고 잘못 결론 내리는 것
+제2종 오류 : 실제 효과를 우연에 의한 효과라고 잘못 결론 내리는 것
+
+
+```{r}
+obs_pct_diff <- 100 * (200/23739-182/22588) # 그룹 A, B 각각 갯수로 나눠서 전환된 값들만 추출
+conversion <- c(rep(0,45945), rep(1, 382))
+perm_diffs<-rep(0,1000)
+for (i in 1:1000){
+  perm_diffs[i]<-100*perm_fun(conversion, 23739, 22588)
+}
+hist(perm_diffs, xlab='conversion rate(percent)', main='')
+abline(v=obs_pct_diff, lty=2, lwd=1.5)
+text(" observed\n difference", x=obs_pct_diff, y=par()$usr[4]-20, adj=0)
+
+# p값 추정
+
+mean(perm_diffs > obs_pct_diff)
+
+# 우연히 얻은 결곽가 30% 이상 이므로, 이상적인 극단 값을 얻을 수 있다.
+```
+
+# 이 문제는 이항분포에 따르므로 굳이 순열검정을 통해 문제를 풀 이유가 없다.
+
+```{r}
+prop.test(x=c(200,182),n=c(23739,22588),alternative='greater')
+
+# p-value = 0.3498 : 근사한 확률을 구한 것을 확인할 수 있다.
+
+
+```
+
+# 유의수준 : 랜덤 모델이 주어 졌을때, 극단적인 결과가 나올 확률은 어느정도 인가
+             모델 적합도에 대해 역으로 추적하는 방법
+             
+# P값의 의미
+
+1. 랜덤모델이 주어 졌을 때, 그 결과가 관찰된 결과보다 더 극단적인 확률
+
+-P값은 통계적으로 유의미하다라는 결론에 대한 논리적 뒷받침이 다소 약하다.
+
+1. p값은 이 데이터가 특정 통계 모델과 얼마나 상반되는지 나타 낼 수 있다.
+2. p값은 연구가설이 사실이 확률이나, 데이터가 랜덤하게 생성되었을 확률을 측정하는 것은 아니다.
+3. 과학적 결론, 비즈니스나 정책 결정은 p값이 특정한 임계값을 통과하는지 여부를 기준으로해서는 안된다.
+4. 적절한 추론을 위해서는 완전한 보고와 투명성이 요구된다.
+5. p값 또는 통계적 유의성은 효과의 크기나 결과의 중요성을 의미하지 않는다.
+6. p값 그 자체는 모델이나 가설에 대한 증거를 측정하기 위한 좋은 지표가 아니다.
+
+# p값의 유의성 검정은 실험에서 의사결정을 좌우하는 도구로서 사용하는 것이 아니라 어떤결정에 관련된 정보의 일부분인 것을 알아야 한다.
+
+- 검정통계량 : 모든 유의성 검정은 관심있는 효과를 측정하기 위해 사용하는 통계량
+
+# t 분포 : 모집단이 정규분포를 하더라고 모분산(시그마제곱)이 알려져 있지 않고, 표본의 수가 적은 경우 평균(모평균)에 대한 신뢰구간 추정 및 가설검정에 아주 유용하게 쓰이는 분포이다.
+(표본의 수는 30개 이하) (S^2 표본분산을 알아야 가능하다.)
+
+t(n) - n은 자유도, 값을 구할 때는 n-1로 하여서 값을 구한다.
+
+
+```{r}
+
+session_times<-read.csv('c:/book/web_page_data.csv')
+t.test(Time~Page, data=session_times,alternative='less')
+
+# 대립가설 - 페이지 A 에 대한 평균 세션시간이 페이지 B 에대한 평균보다 작다.
+p-value = 0.1408
+
+
+```
+
+# 다중검정 : 실험조건의 평균들을 대상으로 여러번 비교를 수행하는 것을 의미한다.
+
+예) A,B,C 처리를 할 경우 : A,B는 서로다른가, B,C는 서로다른가, A,C는 서로 다른가
+
+- 오버피팅 : 잡음까지 피팅하는 것을 의미 즉, 오류 값까지 모델을 만들 때 계산하면서 생기는 오류 
+             (유의미 하지 않은 값도 추가해서 유의미한 것처럼 만들어 버린다.)
+
+- 거짓발견 비율 (FDR) : 다중검정에서 1종 오류가 발생하는 비율
+
+- 홀드아웃세트 : Train/Test set을 나눠서 검정을 하는 방법
+
+- 다중검정을 할 때는 검정횟수에 따라 유의수준을 나눠서 값을 정확하게 파악하는 것이 좋다. 
+(이러한 방법을 통계적 수정절차라고 함)
+
+# 자유도 : 많은 통계 검정에서 입력으로 주어지는 값, 비편향된 추정값을 뽑기 위해 필요.
+
+★  유의성 검정에서는 자유도가 그렇게 중요하지 않다. 이유는 n 값이 충분히  큰값이기 때문이다.
+하지만, 회귀에서 요인변수(로지스틱회귀 까지 포함) 완전히 필요 없는 예측변수가 있을 경우 회귀 알고리즘을 사용하는 것이 어렵다. (범주형 변수를 이진지표로 요인화 할때 가장 많이 발생)
+
+# 분산분석 : 여러 그룹간의 통계적으로 유의미한 차이를 검정하는 통계적 절차 (ANOVA)
+
+- 쌍별비교 : 여러 그룹 중 두 그룹 간의 가설검정
+- 총괄검정 : 여러 그룹 평균들의 전체 분산에 관한 단일 가설검정
+- 분산분해 : 구성요소 분리, 예를 들면 전체평균, 처리평균, 잔차 오차로 부터 개별 값들에 대한 기여
+- F 통계량 : 그룹 평균 간의 차이가 랜덤 모델에서 예상되는 것보다 벗어나는 정도를 측정하는 표준화 된              통계량
+- SS : 어떤 평균으로부터의 편차들의 제곱합
+
+# ANOVA를 토대로 재표본 추출 과정
+1. 모든 데이터를 한상자에 모은다.
+2. 5개의 값을 갖는 4개의 재표본을 섞어서 추출한다.
+3. 각 그룹의 평균을 기록
+4. 네 그룹 평균 사이의 분산을 기록
+5. 2~4단계를 여러번 반복한다 
+
+```{r}
+
+
+four_sessions<-read.csv('c:/book/four_sessions.csv')
+
+install.packages('lmPerm')
+library(lmPerm) #ANOVA 순열검정을 도와 주는 라이브러리
+summary(aovp(Time~Page, data=four_sessions))
+
+```
+
+F 통계량 검정 - 잔차오차로 인한 분산과 그룹 평균의 분산에 대한 비율을 기초로 한다.
+
+```{r}
+
+summary(aov(Time~Page, data=four_sessions))
+
+# Df: 자유도 , Sum Sq: 제곱합, Mean Sq: 평균제곱 편차 , F_value : F 통계량
+
+# F 분포 : 2개이상의 표본평균들이 동일한 모평균을 가진 집단에서 추출되었는지, 서로 다른 모집단에서 추출된 것인지 파악하기 위해 필요
+
+# 조건: 자유도가 v1,v2 인 카이제곱에 따르는 A,B 확률변수 가 잇을 때  F=(A/v1)/(B/v2)
+
+
+```
+
+# 카이제곱 검정: 동시에 여러가지 처리를 한번에 테스트할 필요가 있을 때 사용, 횟수 관련 데이터에 주로 사용되며, 예상되는 분표가 얼마나 잘맞는지 검정
+
+# 피셔의 정확검정 : 사건 횟수가 굉장히 낮을 때 (5이하) 재표본 추출 (모든 경우의 수를 통한 확률 구하기)을 통해 정확한 P값을 얻어내는 방법 
+
+- 통계학에서 흔한 절차는 관측된 데이터가 독립성 가정을 따르는지 검증하는 것이다.
+
+# 멀티암드 밴딧 알고리즘(MAB) - 실험 설계에 대한 전통적인 통계적 접근 방식보다 명시적인 최적화와
+                                좀 더 빠른 의사결정을 가능하게 하는 알고리즘 (웹테스트)
+                              - 다중 처리실험에 대한 비유 
+                              - 실험을 계속하면서 새로운 가정을 뺄 것이냐 추가할 것이냐를 따진다.
+                                예) 카카오 뉴스 추천 - 가중치를 찾기 
+# 엡실론-그리드 알고리즘 
+
+1. 0 부터 1사이의 난수를 생성한다.
+2. 이 숫자가 0과 엡실론(0과 1 사이의 값으로 일반적으로 아주 작다) 사이에 존재하면, 50/50의 확률로 
+동전 뒤집기를 시행한다.
+3. 숫자가 엡실론보다 크면, 지금까지 가장 좋은 결과를 보인 제안을 표시한다.
+
+- 효과크기 : '클릭률의 20% 향상' 과 같이 통계 검정을 통해 판단할 수 있는 효과의 최소 크기
+- 검정력 : 주어진 표본크기로 주어진 효과크기를 알아낼 확률
+- 유의수준 : 검증시 사용할 통계 유의수준
+
+# 톰슨의 샘플링 : 베타분포를 통해 사전 분포를 가정 후 다음 정보가 나올 때 최적화된 값을 추출할 때 사용 <각 단계마다 표본을 추출하여 최고의 손잡이를 선택할 확률을 최대화 하는 방법>
+ - http://www.kwangsiklee.com/2018/03/%ED%86%B0%EC%8A%A8-%EC%83%98%ED%94%8C%EB%A7%81thompson-sampling%EC%97%90-%EB%8C%80%ED%95%9C-%EC%A7%81%EA%B4%80%EC%A0%81%EC%9D%B8-%EC%9D%B4%ED%95%B4/
+
+# 베타분포 - 감마함수를 통해 구함, A번째 사건이 일어 날 때 까지 걸리는 시간에 대한 연속 확률분포(감마분포) <그래서, 포아송분포와 지수분포와 비슷한 형태로 분포의 그래프가 나타남>
+- 즉, 베타분포는 사전확률을 구하는 분포이다. 그 사전확률을 통해 다음정보를 선택하여 최선의 선택을 한다.
+
+# 표본크기, 탐지하고자 하는 효과크기, 가설검정을 위한 유의 수준, 검정력을 안다면 유의한지를 파악 할수 있다.
+
+# 이중 3가지를 정하게 되면 나머지 하나를 구할 수 있는데, 보통 표본크기를 알고 싶을때가 많은 다. 그래서 어느정도 표본크기를 정할지를 미리 생각해야 한다. pwr패키지는 감은크기의 두표본을 고려한 검정을 할 때 사용한다.
+
+pwr.2p.test(h...,h..., sig.level=..., power=...)
+
+h: 효과크기(비율), n: 표본크기, sig.level: 검정을 수행할 유의수준, power: 검정력(효과크기 알아낼 확률)
+
+# 4장
+
+회귀분석과 상관분석의 차이점
+
+상관분석 : 두 변수 사이의 전체적인 관련 강도를 측정
+회귀분석 : 관계 자체를 정량화하는 방법 - 양을 정해 수치로 매긴다.
+
+```{r}
+lung<-read.csv('c:/book/LungDisease.csv')
+model<-lm(PEFR~Exposure, data=lung)
+model
+
+# Intercept : 절편 , 변수 이름에 나온게 계수 <기울기>
+
+# 잔차 = 관측값 - 예측값
+
+fitted<-predict(model) # 예측값
+resid<-residuals(model) # 잔차
+
+
+```
+
+# 잔차제곱합 : 회귀선은 잔차들을 제곱한 값들의 합을 최소화 하여 선을 나타낸다 (RSS) - 즉, 기울기와 계수를 구하는 방법이다.
+
+# 위에서 말하는 방법을 최소제곱회귀, 보통최소제곱(OLS)회귀라고 한다. - 특이값이 있을 경우 이방법은 위험
+
+# 회귀방정식에선 주로, 기울기 b를 추정하는 것에 초점을 맞추웠다 (데이터간의 관계를 이해하기위해서, 주로 선형관계)
+
+# 최근회귀분석은 수중에 있는 데이터를 설명하는것이 아니라 새로운 데이터에 대한 개별 결과를 예측하는 모델을 구성한다. < 예측모델을 만들기에 주력 >
+
+# 다중 회귀 분석 : 예측변수가 많은 경우 사용
+
+```{r}
+
+house<-read.csv('c:/book/house_sales.csv')
+
+```
+
+# 제곱근 평균제곱오차 (RMSE) : 예측된 Y에 값들의 평균제곱오차의 제곱근을 말한다. 
+- 전반적인 모델의 정확도를 측정하고, 다른모델과 비교하는 기준이 된다.
+
+# 잔차표준오차(RSE) : 예측변수 p개가 주어 졌을 때 사용 하는 식 - 둘의 차이는 자유도를 사용했느냐 안했느냐 차이
+
+# 결정계수(R^2) : 모델 데이터의 변동률을 측정한다. 모델 데이터의 변동률을 측정하고, 데이터에 얼마나 적합한지 평가한다.
+
+# t 통계량 : 통계적으로 유의미한 정도를 의미, 예측변수와 목표변수를 랜덤하게 재배치했을 때 우연히 얻을 수 있는 범위를 어느정도 벗어났는지를 측정한다.
+# t-검정 : 두 집단의 속성을 비교할 때, 속성의 평균차이에 근거해 판단을 내리는 통계검증 방법이다.
+https://igija.tistory.com/164
+
+# 교차타당성검사 : 홀드아웃 샘플 아이디어를 여러 개의 연속된 홀드아웃 샘플로 확장한 것이다. - k 다중교차타당성 검사
+
+# 오컴의 면도날 : 모든 것이 동일한 조건에서는, 복잡한 모델보다는 단순한 모델을 우선 사용해야한다는 원리이다.
+
+# AIC : 2P+ n * log(RSS/n) P : 변수의 갯수, n : 레코드(행)의 갯수 - 모델이 많을 수록 불이익
+https://ko.wikipedia.org/wiki/%EC%BF%A8%EB%B0%B1-%EB%9D%BC%EC%9D%B4%EB%B8%94%EB%9F%AC_%EB%B0%9C%EC%82%B0
+
+# 가중회귀분석 - https://support.minitab.com/ko-kr/minitab/18/help-and-how-to/modeling-statistics/regression/supporting-topics/basics/weighted-regression/
+
+# 더빈-왓슨 통계량 : https://support.minitab.com/ko-kr/minitab/18/help-and-how-to/modeling-statistics/regression/supporting-topics/model-assumptions/test-for-autocorrelation-by-using-the-durbin-watson-statistic/
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         
+
+
+
+
